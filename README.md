@@ -7,4 +7,4 @@
 3. Run `npm start`
 
 #Code is created on nodejs, express, mongodb, ejs (view)
-#Data is predefined on the cloud atlas service which provides mongodb environment 
+#Data is predefined on the cloud atlas service which provides mongodb environment

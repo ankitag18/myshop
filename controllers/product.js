@@ -5,7 +5,7 @@ const helper = require('../helpers/helper');
 
 module.exports = function (app) {
 
-    app.get('/list', (req, res) => {
+    app.get('/', (req, res) => {
         ProductModel.find({}, { _id: 0, __v: 0 }).then((result) => {
             ProductAttributeModel.find().then((attributeDetails) => {
                 const products = result.map((item) => {
