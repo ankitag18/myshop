@@ -1,0 +1,167 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+    <style>
+        .all-products {
+            margin: 10px;
+        }
+
+        .carousel-item {
+            height: 200px;
+        }
+
+        .price {
+            color: red;
+            text-decoration: line-through;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 style="text-align: center">Select Products</h1>
+
+    <div class="row all-products">
+        <% for(var i = 0; i < products.length; i++) { %>
+        <div class="product-item-<%= products[i].id %> col-sm-6">
+            <div class="card">
+                <!-- <img src="..." class="card-img-top" alt="..."> -->
+                <div id="carouselImages-<%= products[i].id %>" class="carousel slide" data-ride="carousel">
+                    <div class="carousel-inner">
+                        <% if(products[i].defaultVariant.length) { %>
+                        <% for(var j = 0; j < products[i].defaultVariant.images.length; j++) { %>
+                        <div class="carousel-item <%= j === 0 ? 'active' : '' %>">
+                            <img class="d-block w-100" src="images/<%= products[i].defaultVariant.images[j] %>" alt="">
+                        </div>
+                        <% } %>
+                        <% } else if(products[i].images.length) { %>
+                        <% for(var j = 0; j < products[i].images.length; j++) { %>
+                        <div class="carousel-item <%= j === 0 ? 'active' : '' %>">
+                            <img class="d-block w-100" src="images/<%= products[i].images[j] %>" alt="">
+                        </div>
+                        <% } %>
+                        <% } else { %>
+                        <div class="carousel-item active">
+                            <img class="d-block w-100" src="images/default_product.jpg" alt="">
+                        </div>
+                        <% } %>
+                    </div>
+                    <a class="carousel-control-prev" href="#carouselImages-<%= products[i].id %>" role="button" data-slide="prev">
+                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Previous</span>
+                    </a>
+                    <a class="carousel-control-next" href="#carouselImages-<%= products[i].id %>" role="button" data-slide="next">
+                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                        <span class="sr-only">Next</span>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title"><%= products[i].name %></h5>
+                    <div id="product-info-<%= products[i].id %>">
+                        <% if(!products[i].attributes.length) { %>
+                        <p class="card-text"><%= products[i].description %></p>
+                        <p class="card-text">
+                            <span class="price">Rs. <%= products[i].price %></span>
+                            <span class="other-price">Rs. <%= products[i].discounted_price %></span>
+                        </p>
+                        <% } else if(products[i].defaultVariant.length) { %>
+                        <p class="card-text"><%= products[i].defaultVariant.description %></p>
+                        <p class="card-text">
+                            <span class="price">Rs. <%= products[i].defaultVariant.price %></span>
+                            <span class="other-price">Rs. <%= products[i].defaultVariant.discounted_price %></span>
+                        </p>
+                        <% } %>
+                    </div>
+                    <p class="card-text" id="attribute-info-<%= products[i].id %>">
+                        <% for(var attr in products[i].attributes) { %>
+                        <b>
+                            <% 
+                                const {name} = attributeDetails.find(({id}) => id == attr);
+                            %>
+                            <%= name.toUpperCase() %>:
+                        </b>
+                        <% 
+                            products[i].attributes[attr].forEach(function(item){ 
+                                const is_attr_default = products[i].defaultVariant && products[i].defaultVariant.attributes.some(({value}) => value == item);
+                        %>
+                        <button class="btn-attr" data-selected="<%= is_attr_default ? item : '' %>"
+                            data-value="<%= attr %>" <%= is_attr_default  ? 'disabled' : '' %>
+                            onClick="getProductDetailByAttr(<%= products[i].id %>, <%= attr %>, '<%= item %>', this)">
+                            <%= item %>
+                        </button>
+                        <% }) %>
+                        <br />
+                        <% } %>
+                    </p>
+                    <a href="/details/<%= products[i].id %>" target="_blank" class="btn btn-primary">Check Details</a>
+                </div>
+            </div>
+        </div>
+        <% } %>
+    </div>
+
+
+    <script>
+
+        function getProductDetailByAttr(product_id, attributeId, attributeValue, target) {
+
+                const selectedAttributes = [];
+                $('.btn-attr').map(function () {
+                    if (($(this).attr('data-value') == attributeId && target != this)) {
+                        $(this).removeAttr('data-selected')
+                    } else {
+                        $(target).attr('data-selected', attributeValue);
+                    }
+
+                    if ($(this).attr('data-selected')) {
+                        selectedAttributes.push({ id: $(this).attr('data-value'), value: $(this).attr('data-selected') });
+                    }
+                });
+                // console.log(selectedAttributes);
+
+                const currentAttrName = $(target).attr('data-value');
+                $('.btn-attr').each(function () {
+                    if ($(this).attr('data-value') == currentAttrName) {
+                        if (target == this) {
+                            $(this).attr('disabled', true);
+                        } else {
+                            $(this).removeAttr('disabled');
+                        }
+                    }
+
+                })
+
+                $.ajax({
+                    url: '/getProductDetailByAttr',
+                    method: 'POST',
+                    data: { product_id, attribute: { id: attributeId, value: attributeValue }, selectedAttributes },
+                    success: function (response) {
+                        // console.log(response);
+                        const defaultVariant = response.defaultVariant;
+
+                        var html = `<p class="card-text">${defaultVariant.description}</p>`;
+                        html += `<p class="card-text">`;
+                        html += `<span class="price">${defaultVariant.price}</span>`;
+                        html += `<span class="other-price">${defaultVariant.discounted_price}</span>`;
+                        html += `</p>`;
+
+                        var imageHtml = '';
+                        for (var i = 0; i < defaultVariant.images.length; i++) {
+                            imageHtml += `<div class="carousel-item ${i == 0 ? 'active' : ''}">`;
+                            imageHtml += '<img class="d-block w-100" src="images/' + defaultVariant.images[i] + '" alt="">';
+                            imageHtml += '</div>';
+                        }
+
+                        $(`#carouselImages-${product_id} .carousel-inner`).html(imageHtml);
+                        $(`#product-info-${response.product_id}`).html(html);
+                    }
+                });
+            }
+
+    </script>
+
+</body>
+
+</html>
